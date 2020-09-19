@@ -26,6 +26,7 @@ type (
 
 	Result struct {
 		StatusCode int
+		Headers    http.Header
 	}
 )
 
@@ -43,14 +44,11 @@ func (c Client) Save(ctx context.Context, link *url.URL, options SaveOptions) (R
 		return result, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Host", "web.archive.org")
-	req.Header.Set("Origin", "https://web.archive.org")
-	req.Header.Set("Referer", "https://web.archive.org/save")
-	req.Header.Set("Upgrade-Insecure-Requests", "1")
-	req.Header.Set("DNT", "1")
+
 	resp, err := c.Client.Do(req)
 	if resp != nil {
 		result.StatusCode = resp.StatusCode
+		result.Headers = resp.Header
 		if resp.Body != nil {
 			defer resp.Body.Close()
 		}
