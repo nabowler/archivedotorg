@@ -23,38 +23,27 @@ type (
 		// SaveInMyWebArchive bool
 		// EmailMeTheResults bool
 	}
-
-	Result struct {
-		StatusCode int
-		Headers    http.Header
-	}
 )
 
 const (
 	saveUrlFormat = "https://web.archive.org/save/%s"
 )
 
-func (c Client) Save(ctx context.Context, link *url.URL, options SaveOptions) (Result, error) {
-	result := Result{}
+func (c Client) Save(ctx context.Context, link *url.URL, options SaveOptions) (*http.Response, error) {
 	data := options.Values()
 	data.Add("url", link.String())
 
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf(saveUrlFormat, link.String()), strings.NewReader(data.Encode()))
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := c.Client.Do(req)
-	if resp != nil {
-		result.StatusCode = resp.StatusCode
-		result.Headers = resp.Header
-		if resp.Body != nil {
-			defer resp.Body.Close()
-		}
-	}
-
-	return result, err
+	return c.Client.Do(req)
 }
 
 func (options SaveOptions) Values() url.Values {

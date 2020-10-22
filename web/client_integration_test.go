@@ -27,6 +27,9 @@ func TestSave(t *testing.T) {
 	result, err := client.Save(context.Background(), link, web.SaveOptions{
 		SaveOutLinks: true,
 	})
+	if result != nil {
+		defer result.Body.Close()
+	}
 
 	assert.NoError(t, err)
 	t.Logf("Result: %+v", result)
