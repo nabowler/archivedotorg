@@ -54,12 +54,12 @@ const (
 	// TODO: other collections
 )
 
-func (c Client) Upload(ctx context.Context, opts UploadOptions) (interface{}, error) {
+func (c Client) Upload(ctx context.Context, opts UploadOptions) error {
 	// TODO: read https://archive.org/services/docs/api/ias3.html
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, c.uploadURL(opts), opts.Upload)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("Unable to create the request: %w", err)
 	}
 
 	for k, v := range opts.Metadata {
@@ -88,16 +88,24 @@ func (c Client) Upload(ctx context.Context, opts UploadOptions) (interface{}, er
 
 	resp, err := c.Client.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("Unable to read the %d response body: %w", resp.StatusCode, err)
+	}
+	if resp.StatusCode/100 != 2 {
+		return fmt.Errorf("%d Response: %s", resp.StatusCode, string(body))
+	}
 
 	// TODO: Handle response
 	//  - Slow down
 	//  - Anything of value in the body?
+	//    - On error, yes. On success, no.
 
-	return nil, nil
+	return nil
 }
 
 func (c Client) CheckLimits(ctx context.Context, opts UploadOptions) (interface{}, error) {
@@ -119,6 +127,7 @@ func (opts UploadOptions) identifier() string {
 		return opts.Identifier
 	}
 	// i'm guessing at these rules. seems like lowercase alphanumeric and hyphens is the rule
+	// suggested regex: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{4,100}$
 
 	ident := strings.ToLower(opts.Title)
 	ident = strings.Map(func(r rune) rune {
