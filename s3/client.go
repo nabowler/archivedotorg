@@ -132,7 +132,12 @@ func (c Client) Upload(ctx context.Context, opts UploadOptions) error {
 	//      --header 'x-archive-meta-language:eng'
 	//      --header 'x-archive-meta01-licenseurl:uri(http%3A%2F%2Fcreativecommons.org%2Fpublicdomain%2Fmark%2F1.0%2F)'
 
-	resp, err := c.Client.Do(req)
+	httpClient := c.Client
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return err
 	}
