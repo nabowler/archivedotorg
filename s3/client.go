@@ -1,10 +1,13 @@
 package s3
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -26,6 +29,7 @@ type (
 		FileName    string
 		Identifier  string
 		Title       string
+		Description string
 		SubjectTags []string
 		Creator     string
 		Date        *time.Time
@@ -34,6 +38,7 @@ type (
 
 		AutoMakeBucket bool
 		KeepOldVersion bool
+		SkipDerive     bool
 		// TODO
 		// Language string
 		// License string
@@ -51,6 +56,7 @@ const (
 
 	CollectionData   Collection = "opensource_media"
 	CollectionMovies Collection = "opensource_movies"
+	CollectionTest   Collection = "test_collection"
 	// TODO: other collections
 )
 
@@ -66,7 +72,10 @@ func (c Client) Upload(ctx context.Context, opts UploadOptions) error {
 		if !strings.HasPrefix(k, "x-amz-meta") {
 			k = "x-amz-meta-" + k
 		}
-		req.Header.Set(k, v)
+		req.Header.Set(k, uriEncode(v))
+	}
+	for i, v := range opts.SubjectTags {
+		req.Header.Set(fmt.Sprintf("x-amz-meta%02d-subject", i), uriEncode(v))
 	}
 
 	req.Header.Set("authorization", fmt.Sprintf("LOW %s:%s", c.API.Key, c.API.Secret))
@@ -75,16 +84,53 @@ func (c Client) Upload(ctx context.Context, opts UploadOptions) error {
 	}
 	req.Header.Set("x-archive-meta01-collection", string(opts.Collection))
 	if opts.Title != "" {
-		req.Header.Set("x-archive-meta-title", opts.Title)
+		req.Header.Set("x-archive-meta-title", uriEncode(opts.Title))
 	}
+	if opts.Date != nil {
+		req.Header.Set("x-archive-meta01-date", uriEncode(opts.Date.Format("2006-01-02")))
+	}
+	if opts.Description != "" {
+		req.Header.Set("x-archive-meta01-description", uriEncode(opts.Description))
+	}
+	if opts.Creator != "" {
+		req.Header.Set("x-archive-meta01-creator", uriEncode(opts.Creator))
+	}
+
+	req.Header.Set("x-archive-meta01-scanner", uriEncode("archivedotorg/s3"))
+
 	if opts.AutoMakeBucket {
 		req.Header.Set("x-amz-auto-make-bucket", "1")
 	}
 	if opts.KeepOldVersion {
 		req.Header.Set("x-archive-keep-old-version", "1")
 	}
+	if opts.SkipDerive {
+		req.Header.Set("x-archive-queue-derive", "0")
+	}
 
-	//TODO: --header 'x-archive-meta-mediatype:images'      --header 'x-archive-meta-language:eng' --header ':1'
+	// for certain types of uploads, we can provide a size hint
+	var sizeHint int64
+	switch t := opts.Upload.(type) {
+	case *bytes.Buffer:
+		sizeHint = int64(t.Len())
+	case *bytes.Reader:
+		sizeHint = int64(t.Len())
+	case *strings.Reader:
+		sizeHint = int64(t.Len())
+	case *os.File:
+		if stat, err := t.Stat(); stat != nil && err == nil {
+			sizeHint = stat.Size()
+		}
+	}
+	if sizeHint > 0 {
+		req.Header.Set("x-archive-size-hint", fmt.Sprintf("%d", sizeHint))
+	}
+
+	req.Header.Set("x-amz-acl", "bucket-owner-full-control")
+
+	//TODO: --header 'x-archive-meta-mediatype:images'
+	//      --header 'x-archive-meta-language:eng'
+	//      --header 'x-archive-meta01-licenseurl:uri(http%3A%2F%2Fcreativecommons.org%2Fpublicdomain%2Fmark%2F1.0%2F)'
 
 	resp, err := c.Client.Do(req)
 	if err != nil {
@@ -140,4 +186,8 @@ func (opts UploadOptions) identifier() string {
 		return '-'
 	}, ident)
 	return ident
+}
+
+func uriEncode(s string) string {
+	return fmt.Sprintf("uri(%s)", url.PathEscape(s))
 }

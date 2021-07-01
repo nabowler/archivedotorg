@@ -1,5 +1,3 @@
-
-X-File-Size: 87208
 x-archive-size-hint: 87208
 x-amz-acl: bucket-owner-full-control
 x-amz-auto-make-bucket: 1

@@ -2,6 +2,7 @@ package s3_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -25,20 +26,27 @@ func MustClient(t *testing.T) s3.Client {
 	return s3.Client{
 		API: api,
 		Client: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 90 * time.Second,
 		},
 	}
 }
 
 func TestUpload(t *testing.T) {
+	if testing.Short() {
+		t.Skipf("This test may take over 30 seconds")
+	}
 	client := MustClient(t)
 
 	now := time.Now()
-	err := client.Upload(context.Background(), s3.UploadOptions{
-		Upload:      strings.NewReader("This is a test"),
-		FileName:    "test.txt",
-		Identifier:  "s3-client-integration-test-0981237645",
-		Title:       "this is the title",
+	opts := s3.UploadOptions{
+		Upload:     strings.NewReader("This is a test"),
+		FileName:   "test.txt",
+		Identifier: fmt.Sprintf("s3-client-integration-test-%d", time.Now().UnixNano()),
+		Title:      "this is the title",
+		Description: `This is my description
+		it has many
+
+		lines.`,
 		SubjectTags: []string{"subject1", "subject2"},
 		Creator:     "TestUpload",
 		Date:        &now,
@@ -46,12 +54,16 @@ func TestUpload(t *testing.T) {
 			"key1": "value1",
 			"key2": "value2",
 		},
-		Collection:     s3.CollectionData,
+		Collection:     s3.CollectionTest,
 		AutoMakeBucket: true,
 		KeepOldVersion: true,
-	})
+		SkipDerive:     true,
+	}
+	err := client.Upload(context.Background(), opts)
 
 	if err != nil {
 		t.Fatalf("Unable to upload the integration test file: %v", err)
 	}
+
+	t.Logf("The test file can be found at https://archive.org/details/%s", opts.Identifier)
 }
