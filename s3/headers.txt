@@ -1,0 +1,17 @@
+
+X-File-Size: 87208
+x-archive-size-hint: 87208
+x-amz-acl: bucket-owner-full-control
+x-amz-auto-make-bucket: 1
+x-archive-meta01-subject: uri(tag1)
+x-archive-meta02-subject: uri(tag2)
+x-archive-meta-mediatype: uri(image)
+x-archive-meta01-collection: uri(opensource_image)
+x-archive-meta01-description: uri(%3Cdiv%3EThis%20is%20my%20description%3C%2Fdiv%3E%3Cdiv%3E%3Cbr%3E%3C%2Fdiv%3E%3Cdiv%3Eline%203%3Cbr%3E%3C%2Fdiv%3E)
+x-archive-meta01-title: uri(title)
+x-archive-meta01-creator: uri(The%20Creator)
+x-archive-meta01-date: uri(2020-01-02)
+x-archive-meta01-language: uri(english-handwritten)
+x-archive-meta02-collection: test_collection
+x-archive-meta01-licenseurl: uri(http%3A%2F%2Fcreativecommons.org%2Fpublicdomain%2Fmark%2F1.0%2F)
+x-archive-meta01-scanner: uri(Internet%20Archive%20HTML5%20Uploader%201.6.4)
