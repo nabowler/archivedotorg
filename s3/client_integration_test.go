@@ -13,6 +13,10 @@ import (
 )
 
 func MustClient(t *testing.T) s3.Client {
+	if testing.Short() {
+		t.Skipf("This test may take over 30 seconds")
+	}
+
 	api := s3.API{
 		Key:    os.Getenv("S3_TEST_API_KEY"),
 		Secret: os.Getenv("S3_TEST_API_SECRET"),
@@ -32,9 +36,6 @@ func MustClient(t *testing.T) s3.Client {
 }
 
 func TestUpload(t *testing.T) {
-	if testing.Short() {
-		t.Skipf("This test may take over 30 seconds")
-	}
 	client := MustClient(t)
 
 	now := time.Now()
@@ -66,4 +67,22 @@ func TestUpload(t *testing.T) {
 	}
 
 	t.Logf("The test file can be found at https://archive.org/details/%s", opts.Identifier)
+}
+
+func TestFindIdentifier(t *testing.T) {
+	c := s3.Client{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	resp, err := c.FindIdentifier(ctx, "This is a test 321   %wow!")
+
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	if !resp.Success {
+		t.Error("Success was false")
+	}
+
+	t.Logf("%+v", resp)
+
 }

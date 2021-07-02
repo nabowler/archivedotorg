@@ -3,6 +3,7 @@ package s3
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -48,6 +49,11 @@ type (
 	Metadata map[string]string
 
 	Collection string
+
+	IdentifierResponse struct {
+		Identifier string `json:"identifier"`
+		Success    bool   `json:"success"`
+	}
 )
 
 const (
@@ -159,6 +165,37 @@ func (c Client) Upload(ctx context.Context, opts UploadOptions) error {
 	return nil
 }
 
+func (c Client) FindIdentifier(ctx context.Context, identifier string) (IdentifierResponse, error) {
+	var ret IdentifierResponse
+	req, err := http.NewRequest("POST", "https://archive.org/upload/app/upload_api.php", strings.NewReader(url.Values{
+		"name":       []string{"identifierAvailable"},
+		"identifier": []string{identifier},
+		"findUnique": []string{"true"},
+	}.Encode()))
+	if err != nil {
+		return ret, fmt.Errorf("Unable to build the request: %w", err)
+	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	httpClient := c.Client
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return ret, fmt.Errorf("Unable to perform the request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return ret, fmt.Errorf("Unable to read the response: %w", err)
+	}
+
+	return ret, json.Unmarshal(body, &ret)
+}
+
 func (c Client) CheckLimits(ctx context.Context, opts UploadOptions) (interface{}, error) {
 	// https://archive.org/services/docs/api/ias3.html#use-limits
 	return nil, fmt.Errorf("Not implemented")
@@ -194,5 +231,5 @@ func (opts UploadOptions) identifier() string {
 }
 
 func uriEncode(s string) string {
-	return fmt.Sprintf("uri(%s)", url.PathEscape(s))
+	return fmt.Sprintf("uri(%s)", url.QueryEscape(s))
 }

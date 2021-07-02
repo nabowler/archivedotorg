@@ -1,0 +1,7 @@
+Request
+curl 'https://archive.org/upload/app/upload_api.php?callback=jQuery1124031535875984743755_1625184909118'
+ -H 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8'
+ --data-raw 'name=identifierAvailable&identifier=foo+bar+baz&findUnique=true'
+
+Response:
+jQuery1124031535875984743755_1625184909118({"identifier":"foo-bar-baz","success":true});
