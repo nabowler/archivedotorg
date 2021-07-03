@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/nabowler/archivedotorg/web"
 )
 
@@ -31,6 +29,9 @@ func TestSave(t *testing.T) {
 		defer result.Body.Close()
 	}
 
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatalf("Unable to save link: %v", err)
+	}
+
 	t.Logf("Result: %+v", result)
 }

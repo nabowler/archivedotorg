@@ -30,18 +30,6 @@ func TestIdentifer(t *testing.T) {
 			},
 			Expected: "bar",
 		},
-		{
-			UploadOptions: UploadOptions{
-				Title: "BaZ",
-			},
-			Expected: "baz",
-		},
-		{
-			UploadOptions: UploadOptions{
-				Title: "Hello_there-How?Are! You???",
-			},
-			Expected: "hello-there-how-are--you---",
-		},
 	} {
 		i := i
 		tc := tc

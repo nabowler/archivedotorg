@@ -52,8 +52,8 @@ func TestUpload(t *testing.T) {
 		Creator:     "TestUpload",
 		Date:        &now,
 		Metadata: s3.Metadata{
-			"key1": "value1",
-			"key2": "value2",
+			"key1": []string{"value1", "value2"},
+			"key2": []string{"value3"},
 		},
 		Collection:     s3.CollectionTest,
 		AutoMakeBucket: true,
@@ -70,19 +70,32 @@ func TestUpload(t *testing.T) {
 }
 
 func TestFindIdentifier(t *testing.T) {
+	if testing.Short() {
+		t.Skipf("This test may take over several seconds")
+	}
 	c := s3.Client{}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-	resp, err := c.FindIdentifier(ctx, "This is a test 321   %wow!")
+	for _, ident := range []string{
+		"foo",
+		"The quick brown fox jumped over the lazy dogs",
+		"This is a test 321   %wow!",
+		"",
+	} {
+		ident := ident
+		t.Run(fmt.Sprintf("FindIdentifier(%s)", ident), func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			defer cancel()
+			resp, err := c.FindIdentifier(ctx, ident)
 
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	if !resp.Success {
-		t.Error("Success was false")
-	}
+			if err != nil {
+				t.Fatalf("%v", err)
+			}
+			if !resp.Success {
+				t.Error("Success was false")
+			}
 
-	t.Logf("%+v", resp)
+			t.Logf("%+v", resp)
+		})
+	}
 
 }

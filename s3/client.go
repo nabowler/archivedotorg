@@ -36,17 +36,19 @@ type (
 		Date        *time.Time
 		Metadata    Metadata
 		Collection  Collection
+		Scanner     string
 
-		AutoMakeBucket bool
-		KeepOldVersion bool
-		SkipDerive     bool
+		AutoMakeBucket  bool
+		KeepOldVersion  bool
+		SkipDerive      bool
+		SkipUniqueCheck bool
 		// TODO
 		// Language string
 		// License string
 		// MediaType string
 	}
 
-	Metadata map[string]string
+	Metadata map[string][]string
 
 	Collection string
 
@@ -69,16 +71,28 @@ const (
 func (c Client) Upload(ctx context.Context, opts UploadOptions) error {
 	// TODO: read https://archive.org/services/docs/api/ias3.html
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, c.uploadURL(opts), opts.Upload)
+	// determine the identifier
+	ident := opts.identifier()
+	if !opts.SkipUniqueCheck {
+		identifier, err := c.FindIdentifier(ctx, opts.identifier())
+		if err != nil {
+			return fmt.Errorf("Unable to find a unique identifier: %w", err)
+		}
+		if !identifier.Success {
+			return fmt.Errorf("Finding a unique identifier failed without an error.")
+		}
+		ident = identifier.Identifier
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, c.uploadURL(opts, ident), opts.Upload)
 	if err != nil {
 		return fmt.Errorf("Unable to create the request: %w", err)
 	}
 
 	for k, v := range opts.Metadata {
-		if !strings.HasPrefix(k, "x-amz-meta") {
-			k = "x-amz-meta-" + k
+		for i, vi := range v {
+			req.Header.Set(fmt.Sprintf("x-amz-meta%02d-%s", i, k), uriEncode(vi))
 		}
-		req.Header.Set(k, uriEncode(v))
 	}
 	for i, v := range opts.SubjectTags {
 		req.Header.Set(fmt.Sprintf("x-amz-meta%02d-subject", i), uriEncode(v))
@@ -102,7 +116,11 @@ func (c Client) Upload(ctx context.Context, opts UploadOptions) error {
 		req.Header.Set("x-archive-meta01-creator", uriEncode(opts.Creator))
 	}
 
-	req.Header.Set("x-archive-meta01-scanner", uriEncode("archivedotorg/s3"))
+	scanner := opts.Scanner
+	if scanner == "" {
+		scanner = "archivedotorg/s3"
+	}
+	req.Header.Set("x-archive-meta01-scanner", uriEncode(scanner))
 
 	if opts.AutoMakeBucket {
 		req.Header.Set("x-amz-auto-make-bucket", "1")
@@ -201,33 +219,29 @@ func (c Client) CheckLimits(ctx context.Context, opts UploadOptions) (interface{
 	return nil, fmt.Errorf("Not implemented")
 }
 
-func (c Client) uploadURL(opts UploadOptions) string {
+func (c Client) uploadURL(opts UploadOptions, identifier string) string {
 	baseURL := c.API.URL
 	if baseURL == "" {
 		baseURL = DefaultURL
 	}
 	baseURL = strings.TrimSuffix(baseURL, "/")
-	return fmt.Sprintf(uploadURLFormat, baseURL, opts.identifier(), opts.FileName)
+	return fmt.Sprintf(uploadURLFormat, baseURL, identifier, opts.FileName)
 }
 
 func (opts UploadOptions) identifier() string {
+	// suggested regex: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{4,100}$
+
 	if opts.Identifier != "" {
 		return opts.Identifier
 	}
-	// i'm guessing at these rules. seems like lowercase alphanumeric and hyphens is the rule
-	// suggested regex: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{4,100}$
 
-	ident := strings.ToLower(opts.Title)
-	ident = strings.Map(func(r rune) rune {
-		if r >= 'a' && r <= 'z' {
-			return r
-		}
-		if r >= '0' && r <= '9' {
-			return r
-		}
-		return '-'
-	}, ident)
-	return ident
+	if opts.Title != "" {
+		// todo: check title against regex?
+		// go back to mapping strategy?
+		return opts.Title
+	}
+
+	return time.Now().UTC().Format("2006-01-02T150405.999999999Z0700")
 }
 
 func uriEncode(s string) string {
