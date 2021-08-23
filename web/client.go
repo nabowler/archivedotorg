@@ -43,7 +43,12 @@ func (c Client) Save(ctx context.Context, link *url.URL, options SaveOptions) (*
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	return c.Client.Do(req)
+	httpClient := c.Client
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
+	return httpClient.Do(req)
 }
 
 func (options SaveOptions) Values() url.Values {
