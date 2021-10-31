@@ -245,5 +245,7 @@ func (opts UploadOptions) identifier() string {
 }
 
 func uriEncode(s string) string {
-	return fmt.Sprintf("uri(%s)", url.QueryEscape(s))
+	// QueryEscape replaces spaces with `+` which aren't unescaped by archive dot org
+	// PathEscape seems to be compatible with archive dot org
+	return fmt.Sprintf("uri(%s)", url.PathEscape(s))
 }

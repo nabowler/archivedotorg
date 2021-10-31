@@ -69,6 +69,81 @@ func TestUpload(t *testing.T) {
 	t.Logf("The test file can be found at https://archive.org/details/%s", opts.Identifier)
 }
 
+func TestMultiUpload(t *testing.T) {
+	client := MustClient(t)
+
+	now := time.Now()
+	ident := fmt.Sprintf("s3-client-integration-multi-test-%d", time.Now().UnixNano())
+	{
+		opts := s3.UploadOptions{
+			Upload:     strings.NewReader("This is a test for dir1"),
+			FileName:   "dir1/test.txt",
+			Identifier: ident,
+			Title:      "this is the title",
+			Description: `This is my description
+		it has many
+
+		lines.`,
+			SubjectTags: []string{"subject1", "subject2", "subject 3"},
+			Creator:     "Test MultiUpload",
+			Date:        &now,
+			Metadata: s3.Metadata{
+				"key1": []string{"value1", "value2"},
+				"key2": []string{"value3"},
+				"key3": []string{"value 4"},
+			},
+			Collection:      s3.CollectionTest,
+			AutoMakeBucket:  true,
+			KeepOldVersion:  true,
+			SkipDerive:      true,
+			SkipUniqueCheck: true,
+		}
+		err := client.Upload(context.Background(), opts)
+
+		if err != nil {
+			t.Fatalf("Unable to upload the integration test file: %v", err)
+		}
+	}
+
+	{
+		opts := s3.UploadOptions{
+			Upload:          strings.NewReader("This is a test for dir2"),
+			FileName:        "dir2/test.txt",
+			Identifier:      ident,
+			Collection:      s3.CollectionTest,
+			AutoMakeBucket:  true,
+			KeepOldVersion:  true,
+			SkipDerive:      true,
+			SkipUniqueCheck: true,
+		}
+		err := client.Upload(context.Background(), opts)
+
+		if err != nil {
+			t.Fatalf("Unable to upload the integration test file: %v", err)
+		}
+	}
+
+	{
+		opts := s3.UploadOptions{
+			Upload:          strings.NewReader("This is a test for dir 3"),
+			FileName:        "dir 3/test 3.txt",
+			Identifier:      ident,
+			Collection:      s3.CollectionTest,
+			AutoMakeBucket:  true,
+			KeepOldVersion:  true,
+			SkipDerive:      true,
+			SkipUniqueCheck: true,
+		}
+		err := client.Upload(context.Background(), opts)
+
+		if err != nil {
+			t.Fatalf("Unable to upload the integration test file: %v", err)
+		}
+	}
+
+	t.Logf("The test file can be found at https://archive.org/details/%s", ident)
+}
+
 func TestFindIdentifier(t *testing.T) {
 	if testing.Short() {
 		t.Skipf("This test may take over several seconds")
