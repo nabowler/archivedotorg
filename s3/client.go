@@ -179,6 +179,16 @@ func (c Client) Upload(ctx context.Context, opts UploadOptions) error {
 	//  - Slow down
 	//  - Anything of value in the body?
 	//    - On error, yes. On success, no.
+	/*
+		503 Response:
+		    <?xml version='1.0' encoding='UTF-8'?>
+			<Error>
+			  <Code>SlowDown</Code>
+			  <Message>Please reduce your request rate.</Message>
+			  <Resource>Your upload of s3-client-integration-multi-test-1635689404660360760 from username red@ac.ted appears to be spam. If you believe this is a mistake, contact info@archive.org and include this entire message in your email.</Resource>
+			  <RequestId>cd36a624-c520-4d46-8a0b-1c476ee49f2e</RequestId>
+			</Error>
+	*/
 
 	return nil
 }
